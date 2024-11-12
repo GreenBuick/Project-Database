@@ -1,0 +1,7 @@
+DROP TABLE IF EXISTS services;
+DROP TABLE IF EXISTS sales;
+DROP TABLE IF EXISTS customers;
+DROP TABLE IF EXISTS equipment;
+DROP TABLE IF EXISTS equipmentrecord;
+DROP TABLE IF EXISTS locations;
+DROP TABLE IF EXISTS materials;
