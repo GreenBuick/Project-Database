@@ -39,6 +39,8 @@ def validAmount(_conn, serviceKey, materialAmount):
         return 0
     else:
         return int(results[0][0])
+
+
     
 # Print menu with options: create account, view services, view accounts, add new services, remove old services, view sales, modify locations, purchase services
 # Menu will have a few options, 1. Accounts 2. Services 3. Locations 4. Equipment 5. View Sales 6. View Materials
@@ -87,7 +89,7 @@ def displayServices(_conn):
     curr.execute(table)
     results = curr.fetchall()
     
-    header = "{:<10} {:<10} {:<15} {:<150} {:<10}"
+    header = "{:<10} {:<10} {:<15} {:<70} {:<10}"
     print((header.format("Key", "Fee", "Price", "Description", "Equipment Key")))
     for row in results:
         print(header.format(row[0], row[1], row[2], row[3], row[4]))
@@ -182,9 +184,19 @@ def handleServices(_conn):
         choice = intInput()
         clearScreen()
         if(choice == 1):
-            displayLocations(_conn)
+            displayServices(_conn)
         elif(choice == 2):
-            break
+            decision = int(input("What service do you want to order? "))
+            amountMaterial = int(input("How much material do you want to order? "))
+            try:
+                isPossible = validAmount(decision, amountMaterial)
+                if(isPossible != 0):
+                    print(f"Can't order {amountMaterial}kg, we only have {isPossible}kg available in that location.")
+                else:
+                    return
+            except Error:
+                print("You entered an invalid service key or amount of material.")
+            enterContinue()
         elif(choice == 3):
             print("Starting creation process...")
             locationFee = int(input("Enter location fee: "))
