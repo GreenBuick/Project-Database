@@ -80,19 +80,143 @@ def displayServiceMenu():
     print("6. Return")
 
 def displayServices(_conn):
-    return
+    curr = _conn.cursor()
+    table = """
+            SELECT * FROM services
+            """
+    curr.execute(table)
+    results = curr.fetchall()
+    
+    header = "{:<10} {:<10} {:<15} {:<150} {:<10}"
+    print((header.format("Key", "Fee", "Price", "Description", "Equipment Key")))
+    for row in results:
+        print(header.format(row[0], row[1], row[2], row[3], row[4]))
+    enterContinue()
 
 def purchaseService(_conn, serviceKey, materialAmount):
     return
 
+# Gets next available service ID
+def fetchNextAvailableServiceID(_conn):
+    curr = _conn.cursor()
+    table = """
+            SELECT MIN(ser_servicekey + 1)
+            FROM services s1
+            WHERE NOT EXISTS (SELECT 1 FROM services s2 WHERE s2.ser_servicekey = s1.ser_servicekey + 1)
+            """
+    curr.execute(table)
+    return curr.fetchall()[0][0]
+
 def addService(_conn, serviceFee, servicePrice, optionalDescription="No description", equipmentKey=1):
-    return
+    curr = _conn.cursor()
+    table = """
+            INSERT INTO services(ser_servicekey, ser_servicefee, ser_serviceprice, ser_servicedescription, ser_equipmentkey)
+            VALUES (?, ?, ?, ?, ?)
+            """
+    curr.execute(table, (fetchNextAvailableServiceID(), serviceFee, servicePrice, optionalDescription, equipmentKey))
 
 def removeService(_conn, serviceKey):
-    return
+    curr = _conn.cursor()
+    table = """
+            DELETE FROM services
+            WHERE ser_servicekey = ?
+            """
+    curr.execute(table, (serviceKey,))
 
-def modifyService(_conn, serviceKey):
-    return
+def modifyService(_conn, serviceKey, servicePrice, serviceFee, equipmentKey=0):
+    curr = _conn.cursor()
+    if(equipmentKey == 0):
+        if(servicePrice == 0 and serviceFee != 0):
+            table = """
+                    UPDATE services
+                    SET ser_servicefee = ?
+                    WHERE ser_servicekey = ?
+                    """
+            curr.execute(table, (serviceFee, serviceKey))
+        elif(servicePrice != 0 and serviceFee == 0):
+            table = """
+                    UPDATE services
+                    SET ser_serviceprice = ?
+                    WHERE ser_servicekey = ?
+                    """
+            curr.execute(table, (servicePrice, serviceKey))
+        else:
+            table = """
+                    UPDATE services
+                    SET ser_serviceprice = ?,
+                        ser_servicefee = ?
+                    WHERE ser_servicekey = ?
+                    """
+            curr.execute(table, (servicePrice, serviceFee, serviceKey))   
+    else:
+        if(servicePrice == 0 and serviceFee != 0):
+            table = """
+                    UPDATE services
+                    SET ser_servicefee = ?,
+                        ser_equipmentkey = ?
+                    WHERE ser_servicekey = ?
+                    """
+            curr.execute(table, (serviceFee, equipmentKey, serviceKey))
+        elif(servicePrice != 0 and serviceFee == 0):
+            table = """
+                    UPDATE services
+                    SET ser_serviceprice = ?,
+                        ser_equipmentkey = ?
+                    WHERE ser_servicekey = ?
+                    """
+            curr.execute(table, (servicePrice, equipmentKey, serviceKey)) 
+        else:
+            table = """
+                    UPDATE services
+                    SET ser_serviceprice = ?,
+                        ser_servicefee = ?,
+                        ser_equipmentkey = ?
+                    WHERE ser_servicekey = ?
+                    """
+            curr.execute(table, (servicePrice, serviceFee, equipmentKey, serviceKey))
+
+def handleServices(_conn):
+    while(True):
+        clearScreen()
+        displayServiceMenu()
+        choice = intInput()
+        clearScreen()
+        if(choice == 1):
+            displayLocations(_conn)
+        elif(choice == 2):
+            break
+        elif(choice == 3):
+            print("Starting creation process...")
+            locationFee = int(input("Enter location fee: "))
+            locationName = input("Enter location name: ")
+            materialName = input("Enter material name: ")
+            materialAmountKG = input("Enter material amount in KG: ")
+            serviceKey = int(input("Enter service key: "))
+            addLocation(_conn, locationFee, locationName, materialName, materialAmountKG, serviceKey)
+            print("Added successfully!")
+            enterContinue()
+        elif(choice == 4):
+            while(True):
+                decision = input("Which service do you want removed? Type 0 to cancel or return. ")
+                if(decision == '0'):
+                    break
+                else:
+                    confirmation = input(f"Are you sure you want to delete service {decision}? Type Y to confirm, N to cancel. ")
+                    if(confirmation == 'Y'):
+                        removeService(_conn, decision)
+                        print(f"Deleted service {decision}.")
+                        enterContinue()
+                        break
+        elif(choice == 5):
+            locationName = int(input("Which service do you want to modify? "))
+            newServicePrice = input("What is the new service price? (0 if no change): ")
+            newFee = int(input("Has the fee changed to a new number? (0 if not): "))
+            newEquipment = int(input("Has the equipment changed? Enter new number or 0 if no change: "))
+            modifyService(_conn, newServicePrice, newFee, newEquipment)
+            print("Service changed successfully. ")
+            enterContinue()
+        elif(choice == 6):
+            break
     
 def displayLocationMenu():
     print("--------------")
@@ -438,7 +562,7 @@ def main():
         if(choice == 1):
             handleAccounts(conn)
         elif (choice == 2):
-            displayServiceMenu()
+            handleServices(conn)
         elif (choice == 3):
             handleLocations(conn)
         elif (choice == 4):
