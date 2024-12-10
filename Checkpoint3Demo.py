@@ -29,6 +29,12 @@ def displayMenu():
     print("Enter a number:")
     return
 
+def addSale(totalPrice, orderDate, receiptDate, materialName, materialAmount, serviceKey, customerKey):
+    return
+
+def displaySales():
+    return
+
 def displayAccountMenu():
     print("--------------")
     print("1. Display Accounts")
@@ -37,7 +43,7 @@ def displayAccountMenu():
     print("Enter a number:")
     return
 
-def createAccount():
+def createAccount(customerBalance="0", customerAddress="No address", customerPhoneNumber="No phone", customerEmail="No email"):
     return
 
 def viewAccounts():
@@ -56,16 +62,16 @@ def displayServiceMenu():
 def displayServices():
     return
 
-def purchaseServices():
+def purchaseService(serviceKey, materialAmount):
     return
 
-def addService():
+def addService(serviceFee, servicePrice, optionalDescription="No description", equipmentKey=1):
     return
 
-def removeService():
+def removeService(serviceKey):
     return
 
-def modifyService():
+def modifyService(serviceKey):
     return
     
 def displayLocationMenu():
@@ -80,13 +86,13 @@ def displayLocationMenu():
 def displayLocations():
     return
 
-def addLocation():
+def addLocation(locationFee, locationName, materialName, materialAmountKG, serviceKey):
     return
 
-def removeLocation():
+def removeLocation(locationName):
     return
 
-def modifyLocation():
+def modifyLocation(locationName, materialChange, feeChange=0):
     return
 
 def main():
