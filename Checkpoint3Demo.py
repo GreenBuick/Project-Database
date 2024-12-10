@@ -39,7 +39,17 @@ def validAmount(_conn, serviceKey, materialAmount):
         return 0
     else:
         return int(results[0][0])
-    
+
+def getLocationNameFromService(_conn, serviceKey):
+    curr = _conn.cursor()
+    table = """
+            SELECT l_locationname
+            FROM locations
+            WHERE l_servicekey = ?
+            """
+    curr.execute(table, (serviceKey,))
+    return curr.fetchall()[0][0]
+
 def getMaterialNameFromService(_conn, serviceKey):
     curr = _conn.cursor()
     table = """
@@ -48,6 +58,27 @@ def getMaterialNameFromService(_conn, serviceKey):
             WHERE l_servicekey = ?
             """
     curr.execute(table, (serviceKey,))
+    return curr.fetchall()[0][0]
+
+def getEquipmentKeyAndConditionFromService(_conn, serviceKey):
+    curr = _conn.cursor()
+    table = """
+            SELECT e_equipmentkey, e_equipmentcondition
+            FROM equipment, services
+            WHERE ser_servicekey = ?
+            AND ser_equipmentkey = e_equipmentkey
+            """
+    curr.execute(table, (serviceKey,))
+    return curr.fetchall()
+
+def getCustomerBalance(_conn, customerKey):
+    curr = _conn.cursor()
+    table = """
+            SELECT c_customerbalance
+            FROM customers
+            WHERE c_customerkey = customerKey
+            """
+    curr.execute(table, (customerKey,))
     return curr.fetchall()[0][0]
     
 # servicefee + (materialAmount * materialpriceperkg) + locationfee
@@ -61,7 +92,7 @@ def calculateTotalPrice(_conn, serviceKey, materialAmount):
     curr.execute(table, (serviceKey,))
     serviceFee = int(curr.fetchall()[0][0])
 
-    materialName = getMaterialNameFromService(serviceKey)
+    materialName = getMaterialNameFromService(_conn, serviceKey)
     
     table = """
             SELECT m_materialpriceperkg
@@ -152,8 +183,27 @@ def displayServices(_conn):
     enterContinue()
 
 def purchaseService(_conn, serviceKey, customerKey, materialAmount, totalPrice, currentDate):
-    addSale(_conn, totalPrice, )
-    return
+    materialName = getMaterialNameFromService(_conn, serviceKey)
+    addSale(_conn, totalPrice, currentDate, currentDate, materialName, materialAmount, serviceKey, customerKey)
+    curr = _conn.cursor()
+    
+    keyAndCondition = getEquipmentKeyAndConditionFromService(serviceKey)
+    
+    table = """
+            INSERT INTO equipmentrecord(er_usedate, er_conditionondate, er_equipmentkey, er_servicekey)
+            VALUES (?, ?, ?, ?)
+            """
+    curr.execute(table, (currentDate, keyAndCondition[0][1], keyAndCondition[0][0], serviceKey))
+    
+    modifyLocation(_conn, getLocationNameFromService(_conn, serviceKey), -materialAmount)
+    modifyMaterial(_conn, getMaterialNameFromService(_conn, serviceKey), -materialAmount)
+    
+    table = """
+            UPDATE customers
+            SET c_customerbalance = c_customerbalance - ?
+            WHERE c_customerkey = ?
+            """
+    curr.execute(table, (totalPrice, customerKey))
 
 # Gets next available service ID
 def fetchNextAvailableServiceID(_conn):
@@ -252,8 +302,13 @@ def handleServices(_conn):
                 else:
                     totalPrice = calculateTotalPrice(_conn, decision, amountMaterial)
                     confirm = input(f"Are you sure? The total price will be ${totalPrice}. Type Y for yes and N to cancel. ")
+                    customerKey = int(input("Enter customer key: "))
+                    if(totalPrice > getCustomerBalance(_conn, customerKey)):
+                        confirm = 'N'
+                        print("This customer cannot afford the transaction.")
                     if(confirm == 'Y'):
-                        purchaseService(_conn, decision, amountMaterial, totalPrice)
+                        currentDate = input("Enter current date (form YYYY-MM-DD): ")
+                        purchaseService(_conn, decision, customerKey, amountMaterial, totalPrice, currentDate)
                         print("Service purchased successfully. ")
                     else:
                         print("Process cancelled.")
@@ -489,7 +544,7 @@ def handleEquipment(_conn):
             print("Starting creation process...")
             equipmentName = (input("Enter equipment name: "))
             equipmentCondition = input("Enter equipment condition: ")
-            purchaseDate = input("Enter purchase date: ")
+            purchaseDate = input("Enter purchase date (form YYYY-MM-DD): ")
             purchasePrice = int(input("Enter purchase price: "))
             addEquipment(_conn, equipmentName, equipmentCondition, purchaseDate, purchasePrice)
             print("Added successfully!")
