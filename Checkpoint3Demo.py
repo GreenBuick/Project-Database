@@ -193,12 +193,16 @@ def handleLocations(_conn):
                         enterContinue()
                         break
         elif(choice == 4):
-            locationName = int(input("Which location do you want to modify? "))
-            materialChange = input("By how much has the material changed?: ")
-            feeChange = int(input("Has the fee changed to a new number? (0 if not): "))
-            modifyLocation(_conn, materialChange, feeChange)
-            print("Location changed successfully. ")
-            enterContinue()
+            while(True):
+                locationName = int(input("Which location do you want to modify? Type 0 to cancel or return. "))
+                if(locationName == 0):
+                        break
+                else:
+                    materialChange = input("By how much has the material changed?: ")
+                    feeChange = int(input("Has the fee changed to a new number? (0 if not): "))
+                    modifyLocation(_conn, materialChange, feeChange)
+                    print("Location changed successfully. ")
+                    enterContinue()
         elif(choice == 5):
             break
 
