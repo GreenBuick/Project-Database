@@ -1,18 +1,18 @@
 CREATE TABLE services (
     ser_servicekey decimal(3,0) not null, -- premium from company for using their services
     ser_servicefee decimal(7,2) not null,
-    ser_serviceprice decimal(9,4) not null, -- price per kg
-    ser_servicedescription varchar(250) not null,
+    ser_serviceprice decimal(9,4) not null, -- price per kg of material being provided
+    ser_servicedescription varchar(250) not null, -- new
     ser_equipmentkey decimal(2,0) not null
 );
 
 CREATE TABLE sales (
-    s_salenumber decimal(4,0) not null,
+    s_salenumber decimal(4,0) not null, -- new
     s_totalprice decimal(8,2) not null,
     s_orderdate date not null,
     s_receiptdate date not null,
-    s_materialname varchar(30) not null,
-    s_materialamount decimal(8,2) not null, -- material amount sold in kg
+    s_materialname varchar(30) not null, -- new
+    s_materialamount decimal(8,2) not null, -- material amount sold in kg, new
     s_servicekey decimal(3,0) not null,
     s_customerkey decimal(2,0) not null
 );
@@ -45,7 +45,7 @@ CREATE TABLE locations (
     l_locationfee decimal(7,2) not null, -- premium for using location
     l_locationname varchar(50) not null,
     l_materialname varchar(30) not null,
-    l_materialamountkg decimal(8,2) not null, -- amount of material on site
+    l_materialamountkg decimal(8,2) not null, -- amount of material on site, new
     l_servicekey decimal(3,0) not null
 );
 
