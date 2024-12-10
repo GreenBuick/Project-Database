@@ -61,7 +61,7 @@ def calculateTotalPrice(_conn, serviceKey, materialAmount):
     curr.execute(table, (serviceKey,))
     serviceFee = int(curr.fetchall()[0][0])
 
-    materialName = getMaterialNameFromService(serviceKey)
+    materialName = getMaterialNameFromService(_conn, serviceKey)
     
     table = """
             SELECT m_materialpriceperkg
@@ -72,7 +72,7 @@ def calculateTotalPrice(_conn, serviceKey, materialAmount):
     materialTotalPrice = materialAmount * int(curr.fetchall()[0][0])
     
     table = """
-            SEELCT l_locationfee
+            SELECT l_locationfee
             FROM locations
             WHERE l_servicekey = ?
             """
@@ -151,8 +151,8 @@ def displayServices(_conn):
         print(header.format(row[0], row[1], row[2], row[3], row[4]))
     enterContinue()
 
-def purchaseService(_conn, serviceKey, customerKey, materialAmount, totalPrice, currentDate):
-    addSale(_conn, totalPrice, )
+def purchaseService(_conn, serviceKey, customerKey, materialAmount, totalPrice, currentDate, materialName):
+    addSale(_conn, totalPrice, currentDate, currentDate, materialName, materialAmount, serviceKey, customerKey)
     return
 
 # Gets next available service ID
@@ -243,34 +243,47 @@ def handleServices(_conn):
         if(choice == 1):
             displayServices(_conn)
         elif(choice == 2):
-            decision = int(input("What service do you want to order? "))
-            amountMaterial = int(input("How much material do you want to order? "))
-            try:
-                isPossible = validAmount(decision, amountMaterial)
-                if(isPossible != 0):
-                    print(f"Can't order {amountMaterial}kg, we only have {isPossible}kg available in that location.")
+            while(True):
+                decision = int(input("What service do you want to order? Type 0 to cancel or return. "))
+                if(decision == 0):
+                    break
                 else:
+                    amountMaterial = int(input("How much material do you want to order? "))
+                    try:
+                        isPossible = validAmount(_conn, decision, amountMaterial)
+                        if(isPossible != 0):
+                            print(f"Can't order {amountMaterial}kg, we only have {isPossible}kg available in that location.")
+                        else:
+                            totalPrice = calculateTotalPrice(_conn, decision, amountMaterial)
+                    except Error:
+                        print("You entered an invalid service key or amount of material.")
                     totalPrice = calculateTotalPrice(_conn, decision, amountMaterial)
                     confirm = input(f"Are you sure? The total price will be ${totalPrice}. Type Y for yes and N to cancel. ")
+                    currentDate = '2024-12-10'
+                    customerKey = 2
+                    materialName = 'Tungsten'
                     if(confirm == 'Y'):
-                        purchaseService(_conn, decision, amountMaterial, totalPrice)
+                        purchaseService(_conn, decision, customerKey, amountMaterial, totalPrice, currentDate, materialName)
                         print("Service purchased successfully. ")
                     else:
                         print("Process cancelled.")
                     enterContinue()
-            except Error:
-                print("You entered an invalid service key or amount of material.")
-            enterContinue()
+                    
         elif(choice == 3):
             print("Starting creation process...")
-            locationFee = int(input("Enter location fee: "))
-            locationName = input("Enter location name: ")
-            materialName = input("Enter material name: ")
-            materialAmountKG = int(input("Enter material amount in KG: "))
-            serviceKey = int(input("Enter service key: "))
-            addLocation(_conn, locationFee, locationName, materialName, materialAmountKG, serviceKey)
-            print("Added successfully!")
-            enterContinue()
+            while(True):
+                decision = (input("If you would like to cancel type 0, if you would like to continue press enter. "))
+                if(decision == '0'):
+                    break
+                else:
+                    locationFee = int(input("Enter location fee: "))
+                    locationName = input("Enter location name: ")
+                    materialName = input("Enter material name: ")
+                    materialAmountKG = int(input("Enter material amount in KG: "))
+                    serviceKey = int(input("Enter service key: "))
+                    addLocation(_conn, locationFee, locationName, materialName, materialAmountKG, serviceKey)
+                    print("Added successfully!")
+                    enterContinue()
         elif(choice == 4):
             while(True):
                 decision = input("Which service do you want removed? Type 0 to cancel or return. ")
@@ -372,14 +385,19 @@ def handleLocations(_conn):
             displayLocations(_conn)
         elif(choice == 2):
             print("Starting creation process...")
-            locationFee = int(input("Enter location fee: "))
-            locationName = input("Enter location name: ")
-            materialName = input("Enter material name: ")
-            materialAmountKG = int(input("Enter material amount in KG: "))
-            serviceKey = int(input("Enter service key: "))
-            addLocation(_conn, locationFee, locationName, materialName, materialAmountKG, serviceKey)
-            print("Added successfully!")
-            enterContinue()
+            while(True):
+                decision = (input("If you would like to cancel type 0, if you would like to continue press enter. "))
+                if(decision == '0'):
+                    break
+                else:
+                    locationFee = int(input("Enter location fee: "))
+                    locationName = input("Enter location name: ")
+                    materialName = input("Enter material name: ")
+                    materialAmountKG = int(input("Enter material amount in KG: "))
+                    serviceKey = int(input("Enter service key: "))
+                    addLocation(_conn, locationFee, locationName, materialName, materialAmountKG, serviceKey)
+                    print("Added successfully!")
+                    enterContinue()
         elif(choice == 3):
             while(True):
                 decision = input("Which location do you want removed? Type 0 to cancel or return. ")
@@ -449,7 +467,9 @@ def fetchNextAvailableEquipmentID(_conn):
     table = """
             SELECT MIN(e_equipmentkey + 1)
             FROM equipment e1
-            WHERE NOT EXISTS (SELECT 1 FROM equipment e2 WHERE e2.e_equipmentkey = e1.e_equipmentkey + 1)
+            WHERE NOT EXISTS (SELECT 1 
+                                FROM equipment e2 
+                                WHERE e2.e_equipmentkey = e1.e_equipmentkey + 1)
             """
     curr.execute(table)
     return curr.fetchall()[0][0]
@@ -491,7 +511,7 @@ def handleEquipment(_conn):
             displayEquipmentRecord(_conn)
         elif(choice == 3):
             print("Starting creation process...")
-            equipmentName = (input("Enter equipment name: "))
+            equipmentName = int(input("Enter equipment name: "))
             equipmentCondition = input("Enter equipment condition: ")
             purchaseDate = input("Enter purchase date: ")
             purchasePrice = int(input("Enter purchase price: "))
@@ -618,13 +638,18 @@ def handleAccounts(_conn):
             displayAccounts(_conn)
         elif(choice == 2):
             print("Starting creation process...")
-            customerBalance = int(input("Enter customer balance: "))
-            customerAddress = input("Enter customer address: ")
-            customerNumber = input("Enter customer phone number: ")
-            customerEmail = input("Enter customer email: ")
-            createAccount(_conn, customerBalance, customerAddress, customerNumber, customerEmail)
-            print("Added successfully!")
-            enterContinue()
+            while(True):
+                decision = (input("If you would like to cancel type 0, if you would like to continue press enter. "))
+                if(decision == '0'):
+                    break
+                else:
+                    customerBalance = int(input("Enter customer balance: "))
+                    customerAddress = input("Enter customer address: ")
+                    customerNumber = input("Enter customer phone number: ")
+                    customerEmail = input("Enter customer email: ")
+                    createAccount(_conn, customerBalance, customerAddress, customerNumber, customerEmail)
+                    print("Added successfully!")
+                    enterContinue()
         elif(choice == 3):
             break
     
