@@ -39,7 +39,48 @@ def validAmount(_conn, serviceKey, materialAmount):
         return 0
     else:
         return int(results[0][0])
+    
+def getMaterialNameFromService(_conn, serviceKey):
+    curr = _conn.cursor()
+    table = """
+            SELECT l_materialname
+            FROM locations
+            WHERE l_servicekey = ?
+            """
+    curr.execute(table, (serviceKey,))
+    return curr.fetchall()[0][0]
+    
+# servicefee + (materialAmount * materialpriceperkg) + locationfee
+def calculateTotalPrice(_conn, serviceKey, materialAmount):
+    curr = _conn.cursor()
+    table = """
+            SELECT ser_servicefee
+            FROM services
+            WHERE ser_servicekey = ?
+            """
+    curr.execute(table, (serviceKey,))
+    serviceFee = int(curr.fetchall()[0][0])
 
+    materialName = getMaterialNameFromService(serviceKey)
+    
+    table = """
+            SELECT m_materialpriceperkg
+            FROM materials
+            WHERE m_materialname = ?
+            """
+    curr.execute(table, (materialName,))
+    materialTotalPrice = materialAmount * int(curr.fetchall()[0][0])
+    
+    table = """
+            SEELCT l_locationfee
+            FROM locations
+            WHERE l_servicekey = ?
+            """
+    curr.execute(table, (serviceKey,))
+    locationFee = int(curr.fetchall()[0][0])
+    
+    return serviceFee + materialTotalPrice + locationFee
+    
 
     
 # Print menu with options: create account, view services, view accounts, add new services, remove old services, view sales, modify locations, purchase services
@@ -53,9 +94,24 @@ def displayMenu():
     print("5. View Sales")
     print("6. View Materials")
     print("7. Exit Menu")
+    
+def findNextSaleNumber(_conn):
+    curr = _conn.cursor()
+    table = """
+            SELECT MAX(s_salenumber)
+            FROM sales
+            """
+    curr.execute(table)
+    return (curr.fetchall()[0][0] + 1)
 
-def addSale(totalPrice, orderDate, receiptDate, materialName, materialAmount, serviceKey, customerKey):
-    return
+def addSale(_conn, totalPrice, orderDate, receiptDate, materialName, materialAmount, serviceKey, customerKey):
+    curr = _conn.cursor()
+    saleNumber = findNextSaleNumber(_conn)
+    table = """
+            INSERT INTO sales
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """
+    curr.execute(table, (saleNumber, totalPrice, orderDate, receiptDate, materialName, materialAmount, serviceKey, customerKey))
 
 def displaySales(_conn):
     clearScreen()
@@ -95,7 +151,8 @@ def displayServices(_conn):
         print(header.format(row[0], row[1], row[2], row[3], row[4]))
     enterContinue()
 
-def purchaseService(_conn, serviceKey, materialAmount):
+def purchaseService(_conn, serviceKey, customerKey, materialAmount, totalPrice, currentDate):
+    addSale(_conn, totalPrice, )
     return
 
 # Gets next available service ID
@@ -193,7 +250,14 @@ def handleServices(_conn):
                 if(isPossible != 0):
                     print(f"Can't order {amountMaterial}kg, we only have {isPossible}kg available in that location.")
                 else:
-                    return
+                    totalPrice = calculateTotalPrice(_conn, decision, amountMaterial)
+                    confirm = input(f"Are you sure? The total price will be ${totalPrice}. Type Y for yes and N to cancel. ")
+                    if(confirm == 'Y'):
+                        purchaseService(_conn, decision, amountMaterial, totalPrice)
+                        print("Service purchased successfully. ")
+                    else:
+                        print("Process cancelled.")
+                    enterContinue()
             except Error:
                 print("You entered an invalid service key or amount of material.")
             enterContinue()
@@ -202,7 +266,7 @@ def handleServices(_conn):
             locationFee = int(input("Enter location fee: "))
             locationName = input("Enter location name: ")
             materialName = input("Enter material name: ")
-            materialAmountKG = input("Enter material amount in KG: ")
+            materialAmountKG = int(input("Enter material amount in KG: "))
             serviceKey = int(input("Enter service key: "))
             addLocation(_conn, locationFee, locationName, materialName, materialAmountKG, serviceKey)
             print("Added successfully!")
@@ -220,8 +284,8 @@ def handleServices(_conn):
                         enterContinue()
                         break
         elif(choice == 5):
-            locationName = int(input("Which service do you want to modify? "))
-            newServicePrice = input("What is the new service price? (0 if no change): ")
+            locationName = input("Which service do you want to modify? ")
+            newServicePrice = int(input("What is the new service price? (0 if no change): "))
             newFee = int(input("Has the fee changed to a new number? (0 if not): "))
             newEquipment = int(input("Has the equipment changed? Enter new number or 0 if no change: "))
             modifyService(_conn, newServicePrice, newFee, newEquipment)
@@ -311,7 +375,7 @@ def handleLocations(_conn):
             locationFee = int(input("Enter location fee: "))
             locationName = input("Enter location name: ")
             materialName = input("Enter material name: ")
-            materialAmountKG = input("Enter material amount in KG: ")
+            materialAmountKG = int(input("Enter material amount in KG: "))
             serviceKey = int(input("Enter service key: "))
             addLocation(_conn, locationFee, locationName, materialName, materialAmountKG, serviceKey)
             print("Added successfully!")
@@ -334,7 +398,7 @@ def handleLocations(_conn):
                 if(locationName == 0):
                         break
                 else:
-                    materialChange = input("By how much has the material changed?: ")
+                    materialChange = int(input("By how much has the material changed?: "))
                     feeChange = int(input("Has the fee changed to a new number? (0 if not): "))
                     modifyLocation(_conn, materialChange, feeChange)
                     print("Location changed successfully. ")
@@ -396,7 +460,7 @@ def addEquipment(_conn, equipmentName, equipmentCondition, purchaseDate, purchas
             INSERT INTO equipment(e_equipmentkey, e_equipmentname, e_equipmentcondition, e_purchasedate, e_purchaseprice)
             VALUES (?, ?, ?, ?, ?)
             """
-    curr.execute(table, (fetchNextAvailableEquipmentID(), equipmentName, equipmentCondition, purchaseDate, purchasePrice))
+    curr.execute(table, (fetchNextAvailableEquipmentID(_conn), equipmentName, equipmentCondition, purchaseDate, purchasePrice))
 
 def removeEquipment(_conn, equipmentKey):
     curr = _conn.cursor()
@@ -427,10 +491,10 @@ def handleEquipment(_conn):
             displayEquipmentRecord(_conn)
         elif(choice == 3):
             print("Starting creation process...")
-            equipmentName = int(input("Enter equipment name: "))
+            equipmentName = (input("Enter equipment name: "))
             equipmentCondition = input("Enter equipment condition: ")
             purchaseDate = input("Enter purchase date: ")
-            purchasePrice = input("Enter purchase price: ")
+            purchasePrice = int(input("Enter purchase price: "))
             addEquipment(_conn, equipmentName, equipmentCondition, purchaseDate, purchasePrice)
             print("Added successfully!")
             enterContinue()
