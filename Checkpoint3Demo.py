@@ -435,11 +435,15 @@ def handleEquipment(_conn):
                         enterContinue()
                         break
         elif(choice == 5):
-            equipmentKey = int(input("Which equipment do you want to modify? "))
-            newCondition = input("What is the new condition (A, B, or C): ")
-            modifyEquipmentCondition(_conn, equipmentKey, newCondition)
-            print("Condition changed successfully. ")
-            enterContinue()
+            while(True):
+                equipmentKey = int(input("Which equipment do you want to modify? Type 0 to cancel or return. "))
+                if(equipmentKey == 0):
+                    break
+                else:
+                    newCondition = input("What is the new condition (A, B, or C): ")
+                    modifyEquipmentCondition(_conn, equipmentKey, newCondition)
+                    print("Condition changed successfully. ")
+                    enterContinue()
         elif(choice == 6):
             break
 
