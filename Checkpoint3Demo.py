@@ -344,21 +344,21 @@ def removeLocation(_conn, locationName):
             """
     curr.execute(table, (locationName,))
 
-def modifyLocation(_conn, locationName, materialChange, newFee=0):
+def modifyLocation(_conn, locationName, materialChange, newFee):
     curr = _conn.cursor()
     if(newFee != 0):
         table = """
                 UPDATE locations
                 SET l_locationfee = ?,
                     l_materialamountkg = l_materialamountkg + ?
-                WHERE locationName = ?
+                WHERE l_locationName = ?
                 """
         curr.execute(table, (newFee, materialChange, locationName))
     else:
         table = """
                 UPDATE locations
                 SET l_materialamountkg = l_materialamountkg + ?
-                WHERE locationName = ?
+                WHERE l_locationName = ?
                 """
         curr.execute(table, (materialChange, locationName))
 
@@ -394,14 +394,14 @@ def handleLocations(_conn):
                         break
         elif(choice == 4):
             while(True):
-                locationName = int(input("Which location do you want to modify? Type 0 to cancel or return. "))
-                if(locationName == 0):
-                        break
+                locationName = input("Which location do you want to modify? Type 0 to cancel or return. ")
+                if(locationName == '0'):
+                    break
                 else:
                     materialChange = int(input("By how much has the material changed?: "))
                     feeChange = int(input("Has the fee changed to a new number? (0 if not): "))
-                    modifyLocation(_conn, materialChange, feeChange)
-                    print("Location changed successfully. ")
+                    modifyLocation(_conn, locationName, materialChange, feeChange)
+                    print("Location changed successfully. \n")
                     enterContinue()
         elif(choice == 5):
             break
