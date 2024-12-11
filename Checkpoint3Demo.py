@@ -76,7 +76,7 @@ def getCustomerBalance(_conn, customerKey):
     table = """
             SELECT c_customerbalance
             FROM customers
-            WHERE c_customerkey = customerKey
+            WHERE c_customerkey = ?
             """
     curr.execute(table, (customerKey,))
     return curr.fetchall()[0][0]
@@ -103,7 +103,7 @@ def calculateTotalPrice(_conn, serviceKey, materialAmount):
     materialTotalPrice = materialAmount * int(curr.fetchall()[0][0])
     
     table = """
-            SEELCT l_locationfee
+            SELECT l_locationfee
             FROM locations
             WHERE l_servicekey = ?
             """
@@ -187,7 +187,7 @@ def purchaseService(_conn, serviceKey, customerKey, materialAmount, totalPrice, 
     addSale(_conn, totalPrice, currentDate, currentDate, materialName, materialAmount, serviceKey, customerKey)
     curr = _conn.cursor()
     
-    keyAndCondition = getEquipmentKeyAndConditionFromService(serviceKey)
+    keyAndCondition = getEquipmentKeyAndConditionFromService(_conn, serviceKey)
     
     table = """
             INSERT INTO equipmentrecord(er_usedate, er_conditionondate, er_equipmentkey, er_servicekey)
@@ -296,7 +296,7 @@ def handleServices(_conn):
             decision = int(input("What service do you want to order? "))
             amountMaterial = int(input("How much material do you want to order? "))
             try:
-                isPossible = validAmount(decision, amountMaterial)
+                isPossible = validAmount(_conn, decision, amountMaterial)
                 if(isPossible != 0):
                     print(f"Can't order {amountMaterial}kg, we only have {isPossible}kg available in that location.")
                 else:
@@ -313,8 +313,9 @@ def handleServices(_conn):
                     else:
                         print("Process cancelled.")
                     enterContinue()
-            except Error:
+            except Error as e:
                 print("You entered an invalid service key or amount of material.")
+                print(e)
             enterContinue()
         elif(choice == 3):
             print("Starting creation process...")
@@ -406,14 +407,14 @@ def modifyLocation(_conn, locationName, materialChange, newFee=0):
                 UPDATE locations
                 SET l_locationfee = ?,
                     l_materialamountkg = l_materialamountkg + ?
-                WHERE locationName = ?
+                WHERE l_locationName = ?
                 """
         curr.execute(table, (newFee, materialChange, locationName))
     else:
         table = """
                 UPDATE locations
                 SET l_materialamountkg = l_materialamountkg + ?
-                WHERE locationName = ?
+                WHERE l_locationName = ?
                 """
         curr.execute(table, (materialChange, locationName))
 
